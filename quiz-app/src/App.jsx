@@ -1,338 +1,311 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import './App.css'
+import StartScreen from './components/StartScreen'
+import QuizScreen from './components/QuizScreen'
+import SummaryScreen from './components/SummaryScreen'
+import StudyPlan from './components/StudyPlan'
 import questions from './questions.json'
 
-const HIGH_SCORE_KEY = 'ai900-highscore'
+const CATEGORY_STATS_KEY = 'ai900-category-stats'
+const MISSED_QUESTIONS_KEY = 'ai900-missed'
 
-function shuffleQuestions(questionBank) {
-  const shuffled = [...questionBank]
+const CATEGORY_META = [
+  {
+    name: 'AI Workloads & Responsible AI',
+    weight: '15-20%',
+    color: '#e74c3c',
+    shortLabel: 'AI',
+  },
+  {
+    name: 'Machine Learning Fundamentals',
+    weight: '15-20%',
+    color: '#3498db',
+    shortLabel: 'ML',
+  },
+  {
+    name: 'Computer Vision',
+    weight: '15-20%',
+    color: '#2ecc71',
+    shortLabel: 'CV',
+  },
+  {
+    name: 'Natural Language Processing',
+    weight: '15-20%',
+    color: '#f39c12',
+    shortLabel: 'NLP',
+  },
+  {
+    name: 'Generative AI',
+    weight: '20-25%',
+    color: '#9b59b6',
+    shortLabel: 'GEN',
+  },
+]
 
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1))
-    const currentItem = shuffled[index]
-    shuffled[index] = shuffled[swapIndex]
-    shuffled[swapIndex] = currentItem
-  }
-
-  return shuffled
+function createEmptyCategoryStats() {
+  return Object.fromEntries(
+    CATEGORY_META.map(({ name }) => [
+      name,
+      {
+        correct: 0,
+        total: 0,
+      },
+    ]),
+  )
 }
 
-function normalizeAnswers(answerIndexes) {
-  return [...answerIndexes].sort((left, right) => left - right)
+function readStoredJson(key, fallbackValue) {
+  if (typeof window === 'undefined') {
+    return fallbackValue
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(key)
+    return rawValue ? JSON.parse(rawValue) : fallbackValue
+  } catch {
+    return fallbackValue
+  }
 }
 
-function areAnswersEqual(left, right) {
-  if (left.length !== right.length) {
-    return false
+function getStoredCategoryStats() {
+  const storedStats = readStoredJson(CATEGORY_STATS_KEY, {})
+  const mergedStats = createEmptyCategoryStats()
+
+  for (const category of CATEGORY_META) {
+    const savedEntry = storedStats?.[category.name]
+
+    if (!savedEntry) {
+      continue
+    }
+
+    mergedStats[category.name] = {
+      correct: Number.parseInt(savedEntry.correct, 10) || 0,
+      total: Number.parseInt(savedEntry.total, 10) || 0,
+    }
   }
 
-  return left.every((value, index) => value === right[index])
+  return mergedStats
 }
 
-function getSingleOptionState(optionIndex, selectedAnswer, correctAnswers, isAnswered) {
-  if (!isAnswered) {
-    return 'idle'
-  }
-
-  if (correctAnswers.includes(optionIndex)) {
-    return 'correct'
-  }
-
-  if (selectedAnswer === optionIndex) {
-    return 'incorrect'
-  }
-
-  return 'idle'
+function getStoredMissedQuestions() {
+  const storedIds = readStoredJson(MISSED_QUESTIONS_KEY, [])
+  return Array.isArray(storedIds) ? storedIds.filter(Number.isInteger) : []
 }
 
-function getMultiOptionState(optionIndex, selectedAnswers, correctAnswers, isAnswered) {
-  const isSelected = selectedAnswers.includes(optionIndex)
-  const isCorrect = correctAnswers.includes(optionIndex)
-
-  if (!isAnswered) {
-    return isSelected ? 'selected' : 'idle'
+function filterQuestionsForMode(mode, questionBank, missedQuestionIds) {
+  if (mode.type === 'ids') {
+    const questionIdLookup = new Set(mode.questionIds)
+    return questionBank.filter((question) => questionIdLookup.has(question.id))
   }
 
-  if (isCorrect) {
-    return 'correct'
+  if (mode.type === 'category') {
+    return questionBank.filter((question) => question.category === mode.category)
   }
 
-  if (isSelected && !isCorrect) {
-    return 'incorrect'
+  if (mode.type === 'missed') {
+    const missedLookup = new Set(missedQuestionIds)
+    return questionBank.filter((question) => missedLookup.has(question.id))
   }
 
-  return 'idle'
+  return questionBank
 }
 
 function App() {
-  const [questionQueue, setQuestionQueue] = useState(() => shuffleQuestions(questions))
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [selectedAnswers, setSelectedAnswers] = useState([])
-  const [isAnswered, setIsAnswered] = useState(false)
-  const [isCorrect, setIsCorrect] = useState(false)
-  const [correctCount, setCorrectCount] = useState(0)
-  const [streak, setStreak] = useState(0)
-  const [highScore, setHighScore] = useState(() => {
-    const storedHighScore = window.localStorage.getItem(HIGH_SCORE_KEY)
-    return storedHighScore ? Number.parseInt(storedHighScore, 10) || 0 : 0
+  const [screen, setScreen] = useState('start')
+  const [categoryStats, setCategoryStats] = useState(getStoredCategoryStats)
+  const [missedQuestionIds, setMissedQuestionIds] = useState(getStoredMissedQuestions)
+  const [activeQuiz, setActiveQuiz] = useState({
+    questions: [],
+    sessionId: 0,
+    title: 'All Categories',
   })
+  const [sessionResults, setSessionResults] = useState([])
+  const [sessionMissedQuestionIds, setSessionMissedQuestionIds] = useState([])
+  const [sessionHighStreak, setSessionHighStreak] = useState(0)
+  const lastQuizScreenRef = useRef('start')
 
-  const currentQuestion = questionQueue[currentIndex]
-  const isMultiSelect = currentQuestion ? currentQuestion.answer.length > 1 : false
-  const progressValue =
-    questionQueue.length === 0 ? 0 : ((currentIndex + 1) / questionQueue.length) * 100
-  const hasFinished = questionQueue.length > 0 && currentIndex >= questionQueue.length
+  function persistCategoryStats(nextStats) {
+    window.localStorage.setItem(CATEGORY_STATS_KEY, JSON.stringify(nextStats))
+  }
 
-  function updateHighScore(nextScore) {
-    if (nextScore <= highScore) {
+  function persistMissedQuestionIds(nextQuestionIds) {
+    window.localStorage.setItem(MISSED_QUESTIONS_KEY, JSON.stringify(nextQuestionIds))
+  }
+
+  function startQuiz(mode) {
+    const filteredQuestions = filterQuestionsForMode(mode, questions, missedQuestionIds)
+
+    if (filteredQuestions.length === 0) {
       return
     }
 
-    setHighScore(nextScore)
-    window.localStorage.setItem(HIGH_SCORE_KEY, String(nextScore))
+    setActiveQuiz((previousQuiz) => ({
+      questions: filteredQuestions,
+      sessionId: previousQuiz.sessionId + 1,
+      title: mode.title,
+    }))
+    setSessionResults([])
+    setSessionMissedQuestionIds([])
+    setSessionHighStreak(0)
+    lastQuizScreenRef.current = 'quiz'
+    setScreen('quiz')
   }
 
-  function resetSelectionState() {
-    setSelectedAnswer(null)
-    setSelectedAnswers([])
-    setIsAnswered(false)
-    setIsCorrect(false)
-  }
+  function handleQuizAnswer(result) {
+    setSessionResults((previousResults) => [...previousResults, result])
 
-  function handleCorrectResult() {
-    const nextStreak = streak + 1
+    if (!result.isCorrect) {
+      setSessionMissedQuestionIds((previousIds) => {
+        if (previousIds.includes(result.questionId)) {
+          return previousIds
+        }
 
-    setIsCorrect(true)
-    setIsAnswered(true)
-    setCorrectCount((previousCount) => previousCount + 1)
-    setStreak(nextStreak)
-    updateHighScore(nextStreak)
-  }
-
-  function handleIncorrectResult() {
-    setIsCorrect(false)
-    setIsAnswered(true)
-    setStreak(0)
-  }
-
-  function handleSingleAnswer(optionIndex) {
-    if (isAnswered || !currentQuestion) {
-      return
+        return [...previousIds, result.questionId]
+      })
     }
 
-    setSelectedAnswer(optionIndex)
-
-    if (currentQuestion.answer.includes(optionIndex)) {
-      handleCorrectResult()
-      return
-    }
-
-    handleIncorrectResult()
-  }
-
-  function toggleMultiSelectOption(optionIndex) {
-    if (isAnswered) {
-      return
-    }
-
-    setSelectedAnswers((previousSelection) => {
-      if (previousSelection.includes(optionIndex)) {
-        return previousSelection.filter((value) => value !== optionIndex)
+    setCategoryStats((previousStats) => {
+      const currentStats = previousStats[result.category] ?? { correct: 0, total: 0 }
+      const nextStats = {
+        ...previousStats,
+        [result.category]: {
+          correct: currentStats.correct + (result.isCorrect ? 1 : 0),
+          total: currentStats.total + 1,
+        },
       }
 
-      return [...previousSelection, optionIndex]
+      persistCategoryStats(nextStats)
+      return nextStats
+    })
+
+    setMissedQuestionIds((previousIds) => {
+      const nextIds = new Set(previousIds)
+
+      if (result.isCorrect) {
+        nextIds.delete(result.questionId)
+      } else {
+        nextIds.add(result.questionId)
+      }
+
+      const nextMissedIds = [...nextIds]
+      persistMissedQuestionIds(nextMissedIds)
+      return nextMissedIds
     })
   }
 
-  function submitMultiSelectAnswer() {
-    if (!currentQuestion || isAnswered) {
+  function handleQuizComplete({ bestStreak }) {
+    setSessionHighStreak(bestStreak)
+    lastQuizScreenRef.current = 'summary'
+    setScreen('summary')
+  }
+
+  function showStudyPlan() {
+    if (screen !== 'plan') {
+      lastQuizScreenRef.current = screen
+    }
+
+    setScreen('plan')
+  }
+
+  function showQuizFlow() {
+    if (screen === 'plan') {
+      setScreen(lastQuizScreenRef.current || 'start')
       return
     }
 
-    const normalizedSelection = normalizeAnswers(selectedAnswers)
-    const normalizedAnswer = normalizeAnswers(currentQuestion.answer)
-
-    if (areAnswersEqual(normalizedSelection, normalizedAnswer)) {
-      handleCorrectResult()
-      return
-    }
-
-    handleIncorrectResult()
+    lastQuizScreenRef.current = 'start'
+    setScreen('start')
   }
 
-  function moveToNextQuestion() {
-    const nextIndex = currentIndex + 1
-
-    resetSelectionState()
-    setCurrentIndex(nextIndex)
-  }
-
-  function restartQuiz() {
-    setQuestionQueue(shuffleQuestions(questions))
-    setCurrentIndex(0)
-    setCorrectCount(0)
-    setStreak(0)
-    resetSelectionState()
-  }
-
-  if (questionQueue.length === 0) {
-    return (
-      <main className="app-shell">
-        <section className="quiz-card quiz-card--loading">
-          <p className="eyebrow">AI-900 Exam Prep</p>
-          <h1>Loading quiz...</h1>
-        </section>
-      </main>
-    )
-  }
-
-  if (hasFinished) {
-    const percentageScore = Math.round((correctCount / questionQueue.length) * 100)
-
-    return (
-      <main className="app-shell">
-        <section className="quiz-card quiz-card--summary">
-          <p className="eyebrow">Session complete</p>
-          <h1>AI-900 Quiz</h1>
-          <p className="summary-copy">
-            You answered {correctCount} of {questionQueue.length} questions correctly.
-          </p>
-
-          <div className="summary-grid">
-            <div className="summary-stat">
-              <span className="summary-label">Final score</span>
-              <strong>{percentageScore}%</strong>
-            </div>
-            <div className="summary-stat">
-              <span className="summary-label">Best streak</span>
-              <strong>{highScore}</strong>
-            </div>
-          </div>
-
-          <button type="button" className="primary-button" onClick={restartQuiz}>
-            Restart
-          </button>
-        </section>
-      </main>
-    )
-  }
-
-  const questionNumber = currentIndex + 1
-  const progressLabel = `Question ${questionNumber} of ${questionQueue.length}`
-  const feedbackClassName = isAnswered
-    ? isCorrect
-      ? 'feedback feedback--correct'
-      : 'feedback feedback--incorrect'
-    : 'feedback'
+  const quizButtonClassName =
+    screen === 'plan' ? 'nav-button' : 'nav-button nav-button--active'
+  const planButtonClassName =
+    screen === 'plan' ? 'nav-button nav-button--active' : 'nav-button'
+  const missedQuestionCount = questions.filter((question) =>
+    missedQuestionIds.includes(question.id),
+  ).length
 
   return (
     <main className="app-shell">
-      <section className="quiz-card">
-        <header className="quiz-header">
-          <div className="stat-chip">
-            <span className="stat-label">Streak</span>
-            <strong>{streak}</strong>
+      <div className="app-frame">
+        <header className="app-nav">
+          <div className="nav-title-block">
+            <p className="nav-kicker">AI-900 Exam Prep</p>
+            <h1>CertMasterMind</h1>
           </div>
-          <div className="stat-chip stat-chip--accent">
-            <span className="stat-label">High score</span>
-            <strong>{highScore}</strong>
+
+          <div className="nav-actions">
+            <button type="button" className={quizButtonClassName} onClick={showQuizFlow}>
+              Quiz
+            </button>
+            <button type="button" className={planButtonClassName} onClick={showStudyPlan}>
+              Study Plan
+            </button>
           </div>
         </header>
 
-        <div className="progress-block" aria-label={progressLabel}>
-          <div className="progress-text-row">
-            <span className="eyebrow">AI-900 Exam Prep</span>
-            <span className="progress-label">{progressLabel}</span>
-          </div>
-          <div className="progress-track" aria-hidden="true">
-            <div className="progress-fill" style={{ width: `${progressValue}%` }} />
-          </div>
-        </div>
+        {screen === 'start' ? (
+          <StartScreen
+            categoryMeta={CATEGORY_META}
+            categoryStats={categoryStats}
+            missedQuestionCount={missedQuestionCount}
+            onStartAll={() =>
+              startQuiz({
+                type: 'all',
+                title: 'All Categories',
+              })
+            }
+            onStartCategory={(categoryName) =>
+              startQuiz({
+                type: 'category',
+                category: categoryName,
+                title: categoryName,
+              })
+            }
+            onStartMissed={() =>
+              startQuiz({
+                type: 'missed',
+                title: 'Missed Questions',
+              })
+            }
+          />
+        ) : null}
 
-        <article key={currentQuestion.id} className="question-panel">
-          <div className="question-copy">
-            <h1>{currentQuestion.question}</h1>
-            {isMultiSelect ? (
-              <p className="question-hint">Select all correct answers, then press Submit.</p>
-            ) : (
-              <p className="question-hint">Tap the best answer to reveal feedback.</p>
-            )}
-          </div>
+        {screen === 'quiz' ? (
+          <QuizScreen
+            questions={activeQuiz.questions}
+            sessionId={activeQuiz.sessionId}
+            sessionTitle={activeQuiz.title}
+            onAnswer={handleQuizAnswer}
+            onComplete={handleQuizComplete}
+          />
+        ) : null}
 
-          <div className="answer-list" role={isMultiSelect ? 'group' : undefined}>
-            {currentQuestion.options.map((option, optionIndex) => {
-              const optionState = isMultiSelect
-                ? getMultiOptionState(
-                    optionIndex,
-                    selectedAnswers,
-                    currentQuestion.answer,
-                    isAnswered,
-                  )
-                : getSingleOptionState(
-                    optionIndex,
-                    selectedAnswer,
-                    currentQuestion.answer,
-                    isAnswered,
-                  )
+        {screen === 'summary' ? (
+          <SummaryScreen
+            categoryMeta={CATEGORY_META}
+            sessionLabel={activeQuiz.title}
+            sessionResults={sessionResults}
+            totalQuestions={activeQuiz.questions.length}
+            bestStreak={sessionHighStreak}
+            onRestart={() => {
+              lastQuizScreenRef.current = 'start'
+              setScreen('start')
+            }}
+            onReviewMissed={() =>
+              startQuiz({
+                type: 'ids',
+                questionIds: sessionMissedQuestionIds,
+                title: 'Review Missed Questions',
+              })
+            }
+            canReviewMissed={sessionMissedQuestionIds.length > 0}
+            reviewMissedCount={sessionMissedQuestionIds.length}
+          />
+        ) : null}
 
-              if (isMultiSelect) {
-                return (
-                  <label
-                    key={`${currentQuestion.id}-${optionIndex}`}
-                    className={`answer-option answer-option--multi answer-option--${optionState}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedAnswers.includes(optionIndex)}
-                      onChange={() => toggleMultiSelectOption(optionIndex)}
-                      disabled={isAnswered}
-                    />
-                    <span>{option}</span>
-                  </label>
-                )
-              }
-
-              return (
-                <button
-                  key={`${currentQuestion.id}-${optionIndex}`}
-                  type="button"
-                  className={`answer-option answer-option--${optionState}`}
-                  onClick={() => handleSingleAnswer(optionIndex)}
-                  disabled={isAnswered}
-                >
-                  <span className="answer-letter">{String.fromCharCode(65 + optionIndex)}</span>
-                  <span>{option}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {isMultiSelect && !isAnswered ? (
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={submitMultiSelectAnswer}
-              disabled={selectedAnswers.length === 0}
-            >
-              Submit
-            </button>
-          ) : null}
-
-          {isAnswered ? (
-            <div className={feedbackClassName}>
-              <p className="feedback-title">{isCorrect ? 'Correct' : 'Not quite'}</p>
-              <p>{currentQuestion.explanation}</p>
-            </div>
-          ) : null}
-
-          {isAnswered ? (
-            <button type="button" className="primary-button" onClick={moveToNextQuestion}>
-              {questionNumber === questionQueue.length ? 'See results' : 'Next ->'}
-            </button>
-          ) : null}
-        </article>
-      </section>
+        {screen === 'plan' ? <StudyPlan categoryMeta={CATEGORY_META} /> : null}
+      </div>
     </main>
   )
 }
