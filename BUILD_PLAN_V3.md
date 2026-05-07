@@ -342,7 +342,7 @@ Vercel auto-deploys.
 | 3. Build Glossary component + nav | ✅ | Added the Glossary tab with live search, category filters, expandable term cards, and App/nav wiring. |
 | 4. Update study plan | ✅ | Replaced `studyPlan.js` with the 22-day question-first schedule while preserving the same data shape. |
 | 5. Test locally | ✅ | `npm.cmd run build` passed, Vite dev booted on `127.0.0.1:4174`, and the runtime pool now serves 169 unique questions including Foundry/Transformer/temperature items. |
-| 6. Deploy | 🔴 | |
+| 6. Deploy | ✅ | Committed as `e6b2a01` and pushed to `origin/main` to trigger the Vercel deployment. |
 
 ---
 
