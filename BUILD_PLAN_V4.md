@@ -424,4 +424,4 @@ Vercel auto-deploys.
 | 5. Build Progress Dashboard | ✅ | Added `ProgressDashboard.jsx` with readiness, SVG charts, simulations, weak spots, matcher stats, study progress, lifetime stats, and reset flow. |
 | 6. Wire into App.jsx navigation | ✅ | Wired matchmaker/dashboard screens into `App.jsx`, expanded nav to 5 destinations, and added desktop-top/mobile-bottom navigation layouts. |
 | 7. Test locally | ✅ | `npm.cmd run build` passed, Vite booted on `127.0.0.1:4175`, and source/data checks confirmed matcher rounds, timed-mode wiring, session-history keys, and the 5-item nav. |
-| 8. Deploy | 🔴 | |
+| 8. Deploy | ✅ | Committed as `028b8a5` and pushed to `origin/main` to trigger the Vercel deployment. |
