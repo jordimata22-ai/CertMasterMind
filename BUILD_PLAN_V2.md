@@ -575,7 +575,7 @@ Vercel auto-deploys within ~30 seconds.
 | 3. Refactor into multi-screen components | ✅ | Split the app into start, quiz, summary, stats, and study-plan components with shared nav and localStorage-backed state. |
 | 4. Randomize questions per category | ✅ | `QuizScreen` now reshuffles with Fisher-Yates whenever the filtered question set or session ID changes. |
 | 5. Test locally | ✅ | Verified `npm.cmd run build` succeeds and confirmed the Vite dev server starts on `127.0.0.1:4173` in a smoke test. |
-| 6. Deploy to Vercel | 🔴 | |
+| 6. Deploy to Vercel | ✅ | Committed as `f503648` and pushed to `origin/main` to trigger the Vercel deployment. |
 
 ---
 
