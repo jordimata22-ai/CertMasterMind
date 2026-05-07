@@ -22,6 +22,7 @@ export default function SummaryScreen({
   sessionResults,
   totalQuestions,
   bestStreak,
+  timingStats,
   onRestart,
   onReviewMissed,
   canReviewMissed,
@@ -30,6 +31,9 @@ export default function SummaryScreen({
   const correctCount = sessionResults.filter((result) => result.isCorrect).length
   const percentageScore = totalQuestions ? Math.round((correctCount / totalQuestions) * 100) : 0
   const breakdown = getBreakdown(categoryMeta, sessionResults)
+  const formattedTotalTime = `${Math.floor(timingStats.totalTime / 60)}:${String(
+    Math.round(timingStats.totalTime % 60),
+  ).padStart(2, '0')}`
 
   return (
     <>
@@ -51,6 +55,23 @@ export default function SummaryScreen({
             <strong>{bestStreak}</strong>
           </article>
         </div>
+
+        {timingStats.timedMode ? (
+          <div className="summary-grid summary-grid--timed">
+            <article className="summary-stat">
+              <span className="summary-label">Total time</span>
+              <strong>{formattedTotalTime}</strong>
+            </article>
+            <article className="summary-stat">
+              <span className="summary-label">Avg / question</span>
+              <strong>{timingStats.avgTime.toFixed(1)}s</strong>
+            </article>
+            <article className="summary-stat">
+              <span className="summary-label">Timeouts</span>
+              <strong>{timingStats.timeouts}</strong>
+            </article>
+          </div>
+        ) : null}
 
         <div className="action-row">
           <button type="button" className="primary-button" onClick={onRestart}>

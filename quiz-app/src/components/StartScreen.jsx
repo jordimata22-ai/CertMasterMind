@@ -12,6 +12,8 @@ export default function StartScreen({
   categoryMeta,
   categoryStats,
   missedQuestionCount,
+  timedMode,
+  onTimedModeChange,
   onStartAll,
   onStartCategory,
   onStartMissed,
@@ -37,6 +39,21 @@ export default function StartScreen({
             </button>
           ) : null}
         </div>
+
+        <label className="timed-mode-toggle">
+          <input
+            type="checkbox"
+            checked={timedMode}
+            onChange={(event) => onTimedModeChange(event.target.checked)}
+          />
+          <span className="timed-mode-toggle__track" aria-hidden="true">
+            <span className="timed-mode-toggle__thumb" />
+          </span>
+          <span className="timed-mode-toggle__copy">
+            <strong>Timed Mode - 60 seconds per question</strong>
+            <span>Simulates exam pacing (45 min for ~45 questions)</span>
+          </span>
+        </label>
       </section>
 
       <StatsPanel categoryMeta={categoryMeta} categoryStats={categoryStats} />

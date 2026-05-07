@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 
 const HIGH_SCORE_KEY = 'ai900-highscore'
+const QUESTION_TIME_LIMIT = 60
+const TIMEOUT_ADVANCE_DELAY = 2000
 
 function shuffleQuestions(questionBank) {
   const shuffled = [...questionBank]
@@ -62,7 +64,14 @@ function getMultiOptionState(optionIndex, selectedAnswers, correctAnswers, isAns
   return 'idle'
 }
 
-export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswer, onComplete }) {
+export default function QuizScreen({
+  questions,
+  sessionId,
+  sessionTitle,
+  timedMode,
+  onAnswer,
+  onComplete,
+}) {
   const [questionQueue, setQuestionQueue] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -72,10 +81,26 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
   const [correctCount, setCorrectCount] = useState(0)
   const [streak, setStreak] = useState(0)
   const [sessionBestStreak, setSessionBestStreak] = useState(0)
+  const [timeRemaining, setTimeRemaining] = useState(QUESTION_TIME_LIMIT)
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now())
+  const [totalElapsedTime, setTotalElapsedTime] = useState(0)
+  const [timeoutCount, setTimeoutCount] = useState(0)
+  const [didTimeoutCurrentQuestion, setDidTimeoutCurrentQuestion] = useState(false)
   const [highScore, setHighScore] = useState(() => {
     const storedHighScore = window.localStorage.getItem(HIGH_SCORE_KEY)
     return storedHighScore ? Number.parseInt(storedHighScore, 10) || 0 : 0
   })
+  const currentQuestion = questionQueue[currentIndex]
+  const isMultiSelect = currentQuestion ? currentQuestion.answer.length > 1 : false
+  const progressValue =
+    questionQueue.length === 0 ? 0 : ((currentIndex + 1) / questionQueue.length) * 100
+  const timerPercentage = (timeRemaining / QUESTION_TIME_LIMIT) * 100
+  const timerClassName =
+    timeRemaining <= 10
+      ? 'timer-track timer-track--danger'
+      : timeRemaining <= 30
+        ? 'timer-track timer-track--warning'
+        : 'timer-track timer-track--safe'
 
   useEffect(() => {
     setQuestionQueue(shuffleQuestions(questions))
@@ -87,12 +112,52 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
     setCorrectCount(0)
     setStreak(0)
     setSessionBestStreak(0)
+    setTimeRemaining(QUESTION_TIME_LIMIT)
+    setQuestionStartTime(Date.now())
+    setTotalElapsedTime(0)
+    setTimeoutCount(0)
+    setDidTimeoutCurrentQuestion(false)
   }, [questions, sessionId])
 
-  const currentQuestion = questionQueue[currentIndex]
-  const isMultiSelect = currentQuestion ? currentQuestion.answer.length > 1 : false
-  const progressValue =
-    questionQueue.length === 0 ? 0 : ((currentIndex + 1) / questionQueue.length) * 100
+  useEffect(() => {
+    if (!timedMode || isAnswered || !currentQuestion) {
+      return undefined
+    }
+
+    const timerId = window.setInterval(() => {
+      setTimeRemaining((previousTime) => {
+        if (previousTime <= 1) {
+          window.clearInterval(timerId)
+          return 0
+        }
+
+        return previousTime - 1
+      })
+    }, 1000)
+
+    return () => window.clearInterval(timerId)
+  }, [currentQuestion, isAnswered, timedMode])
+
+  useEffect(() => {
+    if (!timedMode || isAnswered || !currentQuestion || timeRemaining > 0) {
+      return undefined
+    }
+
+    handleTimedOutQuestion()
+    return undefined
+  }, [currentQuestion, isAnswered, timeRemaining, timedMode])
+
+  useEffect(() => {
+    if (!timedMode || !didTimeoutCurrentQuestion || !isAnswered) {
+      return undefined
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      moveToNextQuestion()
+    }, TIMEOUT_ADVANCE_DELAY)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [didTimeoutCurrentQuestion, isAnswered, timedMode])
 
   function updateHighScore(nextScore) {
     if (nextScore <= highScore) {
@@ -108,12 +173,29 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
     setSelectedAnswers([])
     setIsAnswered(false)
     setIsCorrect(false)
+    setTimeRemaining(QUESTION_TIME_LIMIT)
+    setQuestionStartTime(Date.now())
+    setDidTimeoutCurrentQuestion(false)
+  }
+
+  function finalizeQuestionTiming(forcedElapsedTime) {
+    if (!timedMode) {
+      return 0
+    }
+
+    const computedElapsedTime =
+      forcedElapsedTime ?? Math.min(QUESTION_TIME_LIMIT, Math.max(1, QUESTION_TIME_LIMIT - timeRemaining))
+
+    setTotalElapsedTime((previousElapsed) => previousElapsed + computedElapsedTime)
+    return computedElapsedTime
   }
 
   function recordAnswer(answeredCorrect) {
     if (!currentQuestion || isAnswered) {
       return
     }
+
+    finalizeQuestionTiming()
 
     if (answeredCorrect) {
       const nextStreak = streak + 1
@@ -133,6 +215,25 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
       questionId: currentQuestion.id,
       category: currentQuestion.category,
       isCorrect: answeredCorrect,
+    })
+  }
+
+  function handleTimedOutQuestion() {
+    if (!currentQuestion || isAnswered) {
+      return
+    }
+
+    finalizeQuestionTiming(QUESTION_TIME_LIMIT)
+    setDidTimeoutCurrentQuestion(true)
+    setTimeoutCount((previousCount) => previousCount + 1)
+    setIsCorrect(false)
+    setIsAnswered(true)
+    setStreak(0)
+
+    onAnswer({
+      questionId: currentQuestion.id,
+      category: currentQuestion.category,
+      isCorrect: false,
     })
   }
 
@@ -171,7 +272,13 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
 
   function moveToNextQuestion() {
     if (currentIndex + 1 >= questionQueue.length) {
-      onComplete({ bestStreak: sessionBestStreak })
+      onComplete({
+        bestStreak: sessionBestStreak,
+        totalTime: totalElapsedTime,
+        avgTime: questionQueue.length === 0 ? 0 : totalElapsedTime / questionQueue.length,
+        timeouts: timeoutCount,
+        timedMode,
+      })
       return
     }
 
@@ -218,6 +325,18 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
           <div className="progress-fill" style={{ width: `${progressValue}%` }} />
         </div>
       </div>
+
+      {timedMode ? (
+        <div className="timer-block" aria-label={`Time remaining: ${timeRemaining} seconds`}>
+          <div className="progress-text-row">
+            <span className="eyebrow">Timed Mode</span>
+            <span className="progress-label">{timeRemaining}s remaining</span>
+          </div>
+          <div className={timerClassName} aria-hidden="true">
+            <div className="timer-fill" style={{ width: `${timerPercentage}%` }} />
+          </div>
+        </div>
+      ) : null}
 
       <article key={`${sessionId}-${currentQuestion.id}`} className="question-panel">
         <div className="question-copy">
@@ -286,12 +405,14 @@ export default function QuizScreen({ questions, sessionId, sessionTitle, onAnswe
 
         {isAnswered ? (
           <div className={feedbackClassName}>
-            <p className="feedback-title">{isCorrect ? 'Correct' : 'Not quite'}</p>
+            <p className="feedback-title">
+              {didTimeoutCurrentQuestion ? 'Time ran out' : isCorrect ? 'Correct' : 'Not quite'}
+            </p>
             <p>{currentQuestion.explanation}</p>
           </div>
         ) : null}
 
-        {isAnswered ? (
+        {isAnswered && !didTimeoutCurrentQuestion ? (
           <button type="button" className="primary-button" onClick={moveToNextQuestion}>
             {questionNumber === questionQueue.length ? 'See results' : 'Next ->'}
           </button>

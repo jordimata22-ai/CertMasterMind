@@ -5,10 +5,15 @@ import QuizScreen from './components/QuizScreen'
 import SummaryScreen from './components/SummaryScreen'
 import StudyPlan from './components/StudyPlan'
 import Glossary from './components/Glossary'
+import ServiceMatcher from './components/ServiceMatcher'
+import ProgressDashboard from './components/ProgressDashboard'
 import questions from './questions.json'
 
 const CATEGORY_STATS_KEY = 'ai900-category-stats'
 const MISSED_QUESTIONS_KEY = 'ai900-missed'
+const TIMED_MODE_KEY = 'ai900-timed-mode'
+const SESSION_HISTORY_KEY = 'ai900-session-history'
+const MILESTONES_KEY = 'ai900-milestones'
 
 const CATEGORY_META = [
   {
@@ -108,6 +113,30 @@ function getStoredMissedQuestions() {
   return Array.isArray(storedIds) ? storedIds.filter(Number.isInteger) : []
 }
 
+function getStoredTimedMode() {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  return window.localStorage.getItem(TIMED_MODE_KEY) === 'true'
+}
+
+function getStoredSessionHistory() {
+  const storedHistory = readStoredJson(SESSION_HISTORY_KEY, [])
+  return Array.isArray(storedHistory) ? storedHistory : []
+}
+
+function getStoredMilestones() {
+  return readStoredJson(MILESTONES_KEY, {
+    totalQuestionsAnswered: 0,
+    totalCorrect: 0,
+    totalSessions: 0,
+    totalTimedSessions: 0,
+    firstSessionDate: null,
+    longestStreak: 0,
+  })
+}
+
 function filterQuestionsForMode(mode, questionBank, missedQuestionIds) {
   if (mode.type === 'ids') {
     const questionIdLookup = new Set(mode.questionIds)
@@ -126,19 +155,47 @@ function filterQuestionsForMode(mode, questionBank, missedQuestionIds) {
   return questionBank
 }
 
+function getNavScreen(screen) {
+  if (screen === 'matchmaker') {
+    return 'matchmaker'
+  }
+
+  if (screen === 'dashboard') {
+    return 'dashboard'
+  }
+
+  if (screen === 'plan') {
+    return 'plan'
+  }
+
+  if (screen === 'glossary') {
+    return 'glossary'
+  }
+
+  return 'quiz'
+}
+
 function App() {
   const uniqueQuestions = dedupeQuestions(questions)
   const [screen, setScreen] = useState('start')
   const [categoryStats, setCategoryStats] = useState(getStoredCategoryStats)
   const [missedQuestionIds, setMissedQuestionIds] = useState(getStoredMissedQuestions)
+  const [timedMode, setTimedMode] = useState(getStoredTimedMode)
   const [activeQuiz, setActiveQuiz] = useState({
     questions: [],
     sessionId: 0,
     title: 'All Categories',
+    category: 'All',
   })
   const [sessionResults, setSessionResults] = useState([])
   const [sessionMissedQuestionIds, setSessionMissedQuestionIds] = useState([])
   const [sessionHighStreak, setSessionHighStreak] = useState(0)
+  const [sessionTimingStats, setSessionTimingStats] = useState({
+    timedMode: false,
+    totalTime: 0,
+    avgTime: 0,
+    timeouts: 0,
+  })
   const lastQuizScreenRef = useRef('start')
 
   function persistCategoryStats(nextStats) {
@@ -160,10 +217,17 @@ function App() {
       questions: filteredQuestions,
       sessionId: previousQuiz.sessionId + 1,
       title: mode.title,
+      category: mode.sessionCategory ?? mode.title,
     }))
     setSessionResults([])
     setSessionMissedQuestionIds([])
     setSessionHighStreak(0)
+    setSessionTimingStats({
+      timedMode,
+      totalTime: 0,
+      avgTime: 0,
+      timeouts: 0,
+    })
     lastQuizScreenRef.current = 'quiz'
     setScreen('quiz')
   }
@@ -210,14 +274,61 @@ function App() {
     })
   }
 
-  function handleQuizComplete({ bestStreak }) {
+  function handleQuizComplete({ bestStreak, totalTime, avgTime, timeouts, timedMode: usedTimedMode }) {
+    const correctAnswers = sessionResults.filter((result) => result.isCorrect).length
+    const sessionPercentage =
+      activeQuiz.questions.length === 0
+        ? 0
+        : Math.round((correctAnswers / activeQuiz.questions.length) * 100)
+    const normalizedCategory = activeQuiz.category === 'All Categories' ? 'All' : activeQuiz.category
+    const sessionEntry = {
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      category: normalizedCategory,
+      correct: correctAnswers,
+      total: activeQuiz.questions.length,
+      percentage: sessionPercentage,
+      timedMode: usedTimedMode,
+      totalTime,
+      avgTime,
+      timeouts,
+      isSimulation: normalizedCategory === 'All' && usedTimedMode,
+      passed: sessionPercentage >= 70,
+      missedQuestionIds: sessionMissedQuestionIds,
+    }
+    const nextHistory = [sessionEntry, ...getStoredSessionHistory()].slice(0, 100)
+    const storedMilestones = getStoredMilestones()
+    const nextMilestones = {
+      totalQuestionsAnswered:
+        storedMilestones.totalQuestionsAnswered + activeQuiz.questions.length,
+      totalCorrect: storedMilestones.totalCorrect + correctAnswers,
+      totalSessions: storedMilestones.totalSessions + 1,
+      totalTimedSessions: storedMilestones.totalTimedSessions + (usedTimedMode ? 1 : 0),
+      firstSessionDate: storedMilestones.firstSessionDate ?? sessionEntry.date,
+      longestStreak: Math.max(storedMilestones.longestStreak ?? 0, bestStreak),
+    }
+
+    window.localStorage.setItem(SESSION_HISTORY_KEY, JSON.stringify(nextHistory))
+    window.localStorage.setItem(MILESTONES_KEY, JSON.stringify(nextMilestones))
+
     setSessionHighStreak(bestStreak)
+    setSessionTimingStats({
+      timedMode: usedTimedMode,
+      totalTime,
+      avgTime,
+      timeouts,
+    })
     lastQuizScreenRef.current = 'summary'
     setScreen('summary')
   }
 
+  function handleTimedModeChange(nextValue) {
+    setTimedMode(nextValue)
+    window.localStorage.setItem(TIMED_MODE_KEY, String(nextValue))
+  }
+
   function showStudyPlan() {
-    if (screen !== 'plan' && screen !== 'glossary') {
+    if (!['plan', 'glossary', 'matchmaker', 'dashboard'].includes(screen)) {
       lastQuizScreenRef.current = screen
     }
 
@@ -225,15 +336,31 @@ function App() {
   }
 
   function showGlossary() {
-    if (screen !== 'plan' && screen !== 'glossary') {
+    if (!['plan', 'glossary', 'matchmaker', 'dashboard'].includes(screen)) {
       lastQuizScreenRef.current = screen
     }
 
     setScreen('glossary')
   }
 
+  function showMatchmaker() {
+    if (!['plan', 'glossary', 'matchmaker', 'dashboard'].includes(screen)) {
+      lastQuizScreenRef.current = screen
+    }
+
+    setScreen('matchmaker')
+  }
+
+  function showDashboard() {
+    if (!['plan', 'glossary', 'matchmaker', 'dashboard'].includes(screen)) {
+      lastQuizScreenRef.current = screen
+    }
+
+    setScreen('dashboard')
+  }
+
   function showQuizFlow() {
-    if (screen === 'plan' || screen === 'glossary') {
+    if (['plan', 'glossary', 'matchmaker', 'dashboard'].includes(screen)) {
       setScreen(lastQuizScreenRef.current || 'start')
       return
     }
@@ -242,17 +369,42 @@ function App() {
     setScreen('start')
   }
 
-  const quizButtonClassName =
-    screen === 'plan' || screen === 'glossary'
-      ? 'nav-button'
-      : 'nav-button nav-button--active'
-  const planButtonClassName =
-    screen === 'plan' ? 'nav-button nav-button--active' : 'nav-button'
-  const glossaryButtonClassName =
-    screen === 'glossary' ? 'nav-button nav-button--active' : 'nav-button'
   const missedQuestionCount = uniqueQuestions.filter((question) =>
     missedQuestionIds.includes(question.id),
   ).length
+  const activeNavScreen = getNavScreen(screen)
+  const navigationItems = [
+    {
+      key: 'quiz',
+      label: 'Quiz',
+      icon: '📝',
+      onClick: showQuizFlow,
+    },
+    {
+      key: 'matchmaker',
+      label: 'Match',
+      icon: '🎯',
+      onClick: showMatchmaker,
+    },
+    {
+      key: 'dashboard',
+      label: 'Stats',
+      icon: '📊',
+      onClick: showDashboard,
+    },
+    {
+      key: 'plan',
+      label: 'Plan',
+      icon: '📅',
+      onClick: showStudyPlan,
+    },
+    {
+      key: 'glossary',
+      label: 'Glossary',
+      icon: '📖',
+      onClick: showGlossary,
+    },
+  ]
 
   return (
     <main className="app-shell">
@@ -263,16 +415,21 @@ function App() {
             <h1>CertMasterMind</h1>
           </div>
 
-          <div className="nav-actions">
-            <button type="button" className={quizButtonClassName} onClick={showQuizFlow}>
-              Quiz
-            </button>
-            <button type="button" className={planButtonClassName} onClick={showStudyPlan}>
-              Study Plan
-            </button>
-            <button type="button" className={glossaryButtonClassName} onClick={showGlossary}>
-              Glossary
-            </button>
+          <div className="nav-actions nav-actions--desktop">
+            {navigationItems.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={
+                  activeNavScreen === item.key
+                    ? 'nav-button nav-button--active'
+                    : 'nav-button'
+                }
+                onClick={item.onClick}
+              >
+                {item.icon} {item.label}
+              </button>
+            ))}
           </div>
         </header>
 
@@ -281,6 +438,8 @@ function App() {
             categoryMeta={CATEGORY_META}
             categoryStats={categoryStats}
             missedQuestionCount={missedQuestionCount}
+            timedMode={timedMode}
+            onTimedModeChange={handleTimedModeChange}
             onStartAll={() =>
               startQuiz({
                 type: 'all',
@@ -308,6 +467,7 @@ function App() {
             questions={activeQuiz.questions}
             sessionId={activeQuiz.sessionId}
             sessionTitle={activeQuiz.title}
+            timedMode={timedMode}
             onAnswer={handleQuizAnswer}
             onComplete={handleQuizComplete}
           />
@@ -320,6 +480,7 @@ function App() {
             sessionResults={sessionResults}
             totalQuestions={activeQuiz.questions.length}
             bestStreak={sessionHighStreak}
+            timingStats={sessionTimingStats}
             onRestart={() => {
               lastQuizScreenRef.current = 'start'
               setScreen('start')
@@ -339,7 +500,31 @@ function App() {
         {screen === 'plan' ? <StudyPlan categoryMeta={CATEGORY_META} /> : null}
 
         {screen === 'glossary' ? <Glossary categoryMeta={CATEGORY_META} /> : null}
+
+        {screen === 'matchmaker' ? <ServiceMatcher onBackToMenu={showQuizFlow} /> : null}
+
+        {screen === 'dashboard' ? <ProgressDashboard /> : null}
       </div>
+
+      <nav className="bottom-tab-bar" aria-label="Primary">
+        {navigationItems.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={
+              activeNavScreen === item.key
+                ? 'bottom-tab-bar__item bottom-tab-bar__item--active'
+                : 'bottom-tab-bar__item'
+            }
+            onClick={item.onClick}
+          >
+            <span className="bottom-tab-bar__icon" aria-hidden="true">
+              {item.icon}
+            </span>
+            <span className="bottom-tab-bar__label">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </main>
   )
 }
