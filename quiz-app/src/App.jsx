@@ -4,6 +4,7 @@ import StartScreen from './components/StartScreen'
 import QuizScreen from './components/QuizScreen'
 import SummaryScreen from './components/SummaryScreen'
 import StudyPlan from './components/StudyPlan'
+import Glossary from './components/Glossary'
 import questions from './questions.json'
 
 const CATEGORY_STATS_KEY = 'ai900-category-stats'
@@ -52,6 +53,21 @@ function createEmptyCategoryStats() {
       },
     ]),
   )
+}
+
+function dedupeQuestions(questionBank) {
+  const seenQuestions = new Set()
+
+  return questionBank.filter((question) => {
+    const normalizedQuestion = question.question.trim().toLowerCase()
+
+    if (seenQuestions.has(normalizedQuestion)) {
+      return false
+    }
+
+    seenQuestions.add(normalizedQuestion)
+    return true
+  })
 }
 
 function readStoredJson(key, fallbackValue) {
@@ -111,6 +127,7 @@ function filterQuestionsForMode(mode, questionBank, missedQuestionIds) {
 }
 
 function App() {
+  const uniqueQuestions = dedupeQuestions(questions)
   const [screen, setScreen] = useState('start')
   const [categoryStats, setCategoryStats] = useState(getStoredCategoryStats)
   const [missedQuestionIds, setMissedQuestionIds] = useState(getStoredMissedQuestions)
@@ -133,7 +150,7 @@ function App() {
   }
 
   function startQuiz(mode) {
-    const filteredQuestions = filterQuestionsForMode(mode, questions, missedQuestionIds)
+    const filteredQuestions = filterQuestionsForMode(mode, uniqueQuestions, missedQuestionIds)
 
     if (filteredQuestions.length === 0) {
       return
@@ -200,15 +217,23 @@ function App() {
   }
 
   function showStudyPlan() {
-    if (screen !== 'plan') {
+    if (screen !== 'plan' && screen !== 'glossary') {
       lastQuizScreenRef.current = screen
     }
 
     setScreen('plan')
   }
 
+  function showGlossary() {
+    if (screen !== 'plan' && screen !== 'glossary') {
+      lastQuizScreenRef.current = screen
+    }
+
+    setScreen('glossary')
+  }
+
   function showQuizFlow() {
-    if (screen === 'plan') {
+    if (screen === 'plan' || screen === 'glossary') {
       setScreen(lastQuizScreenRef.current || 'start')
       return
     }
@@ -218,10 +243,14 @@ function App() {
   }
 
   const quizButtonClassName =
-    screen === 'plan' ? 'nav-button' : 'nav-button nav-button--active'
+    screen === 'plan' || screen === 'glossary'
+      ? 'nav-button'
+      : 'nav-button nav-button--active'
   const planButtonClassName =
     screen === 'plan' ? 'nav-button nav-button--active' : 'nav-button'
-  const missedQuestionCount = questions.filter((question) =>
+  const glossaryButtonClassName =
+    screen === 'glossary' ? 'nav-button nav-button--active' : 'nav-button'
+  const missedQuestionCount = uniqueQuestions.filter((question) =>
     missedQuestionIds.includes(question.id),
   ).length
 
@@ -240,6 +269,9 @@ function App() {
             </button>
             <button type="button" className={planButtonClassName} onClick={showStudyPlan}>
               Study Plan
+            </button>
+            <button type="button" className={glossaryButtonClassName} onClick={showGlossary}>
+              Glossary
             </button>
           </div>
         </header>
@@ -305,6 +337,8 @@ function App() {
         ) : null}
 
         {screen === 'plan' ? <StudyPlan categoryMeta={CATEGORY_META} /> : null}
+
+        {screen === 'glossary' ? <Glossary categoryMeta={CATEGORY_META} /> : null}
       </div>
     </main>
   )

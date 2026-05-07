@@ -2458,5 +2458,110 @@
       0
     ],
     "explanation": "Transparency Notes document how the technology works and its implications for ethical consideration."
+  },
+  {
+    "id": 256,
+    "category": "AI Workloads & Responsible AI",
+    "question": "A retail company wants to ensure its AI-powered hiring tool treats all candidates fairly regardless of background. Which responsible AI principle is most relevant?",
+    "options": [
+      "Reliability and Safety",
+      "Fairness",
+      "Privacy and Security",
+      "Transparency"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Fairness addresses bias and equitable treatment across different groups. While Transparency could help identify bias, the question focuses on equal treatment."
+  },
+  {
+    "id": 257,
+    "category": "Machine Learning Fundamentals",
+    "question": "What is a key feature of the Transformer architecture used in modern AI models?",
+    "options": [
+      "It uses convolution layers for image processing",
+      "It processes sequences recursively",
+      "It uses self-attention mechanisms",
+      "It requires less training data than other approaches"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Transformers use self-attention to focus on relevant parts of input sequences. This is the foundation of models like GPT and BERT. Convolution is for CNNs, recursive processing is for RNNs."
+  },
+  {
+    "id": 258,
+    "category": "Generative AI",
+    "question": "What is Microsoft Foundry?",
+    "options": [
+      "A replacement for Azure Machine Learning",
+      "A unified platform for developing AI applications with access to 1,600+ models",
+      "A service only for Azure OpenAI models",
+      "A tool for creating custom AI models from scratch"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Microsoft Foundry (formerly Azure AI Studio) is Microsoft's unified AI development platform with access to a vast model catalog including models from Microsoft, OpenAI, Meta, and Hugging Face. It integrates with but doesn't replace Azure ML."
+  },
+  {
+    "id": 259,
+    "category": "Generative AI",
+    "question": "Which parameter in prompt engineering controls the randomness/creativity of model outputs?",
+    "options": [
+      "max_tokens",
+      "top_p",
+      "temperature",
+      "frequency_penalty"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Temperature (0-1) controls randomness: 0 = deterministic/factual, 1 = creative/random. max_tokens limits output length, top_p controls probability sampling, frequency_penalty reduces repetition."
+  },
+  {
+    "id": 260,
+    "category": "Generative AI",
+    "question": "What is the primary purpose of Retrieval-Augmented Generation (RAG)?",
+    "options": [
+      "To fine-tune a model on custom data",
+      "To ground model responses in specific, retrieved data to reduce hallucinations",
+      "To compress large language models for faster inference",
+      "To translate content between languages"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "RAG retrieves relevant documents/data and includes them in the prompt context, grounding the model's responses in factual information and reducing hallucinations."
+  },
+  {
+    "id": 261,
+    "category": "Generative AI",
+    "question": "What is the difference between zero-shot and few-shot prompting?",
+    "options": [
+      "Zero-shot uses no examples while few-shot provides examples in the prompt",
+      "Zero-shot is faster than few-shot",
+      "Few-shot requires fine-tuning the model",
+      "Zero-shot only works with GPT-4"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Zero-shot prompting gives the model a task with no examples. Few-shot prompting includes example input-output pairs in the prompt to guide the model's response format and style."
+  },
+  {
+    "id": 262,
+    "category": "Generative AI",
+    "question": "What are the features of the Azure AI Foundry model catalog?",
+    "options": [
+      "It only contains Microsoft-built models",
+      "It provides access to 1,600+ models from Microsoft, OpenAI, Meta, Hugging Face and others with filtering and comparison tools",
+      "It is a paid service requiring an Enterprise agreement",
+      "It only supports text generation models"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The Azure AI Foundry model catalog provides access to over 1,600 models from multiple providers. You can filter, compare, and deploy models for various tasks including text, image, and code generation."
   }
 ]

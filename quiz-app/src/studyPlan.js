@@ -2,169 +2,169 @@ const studyPlan = [
   {
     day: 1,
     date: 'May 5',
-    topic: 'What is AI?',
+    topic: 'Blind Run: AI Workloads & Responsible AI',
     description:
-      'MS Learn: Fundamental AI Concepts - define AI, identify AI workload types (ML, CV, NLP, GenAI). Know what each workload does at a high level.',
+      'Do ALL questions in this category cold - no studying first. Read every explanation carefully, especially wrong answers. Note your score.',
     category: 'AI Workloads & Responsible AI',
   },
   {
     day: 2,
     date: 'May 6',
-    topic: 'Responsible AI (Part 1)',
+    topic: 'Blind Run: Machine Learning',
     description:
-      'MS Learn: Responsible AI principles - fairness, reliability & safety, privacy & security. Memorize all 6 principles and one example each.',
-    category: 'AI Workloads & Responsible AI',
+      "Do ALL Machine Learning questions cold. Read every explanation. If something doesn't click, skim ONLY that section on MS Learn - not the whole module.",
+    category: 'Machine Learning Fundamentals',
   },
   {
     day: 3,
     date: 'May 7',
-    topic: 'Responsible AI (Part 2)',
+    topic: 'Blind Run: Computer Vision',
     description:
-      'MS Learn: Remaining principles - inclusiveness, transparency, accountability. Know how each applies to real scenarios.',
-    category: 'AI Workloads & Responsible AI',
+      'Do ALL Computer Vision questions cold. Focus on the explanations for wrong answers. Check the Glossary tab for any unfamiliar service names.',
+    category: 'Computer Vision',
   },
   {
     day: 4,
     date: 'May 8',
-    topic: 'Azure AI Services Overview',
+    topic: 'Blind Run: NLP',
     description:
-      'MS Learn: Azure AI services resource types (multi-service vs single-service), keys, endpoints, regions. Understand when to use which resource type.',
-    category: 'AI Workloads & Responsible AI',
+      'Do ALL NLP questions cold. Pay attention to old vs new service names (LUIS->CLU, QnA Maker->Custom Question Answering).',
+    category: 'Natural Language Processing',
   },
   {
     day: 5,
     date: 'May 9',
-    topic: 'Computer Vision Basics',
+    topic: 'Blind Run: Generative AI',
     description:
-      'MS Learn: Image classification, object detection, CNNs. Know the difference between classification (what is it?) vs detection (where is it?).',
-    category: 'Computer Vision',
+      'Do ALL Generative AI questions cold. This is the heaviest domain (20-25%). Know Microsoft Foundry, prompt engineering params, RAG, content filters.',
+    category: 'Generative AI',
   },
   {
     day: 6,
     date: 'May 10',
-    topic: 'Face & OCR',
+    topic: 'Review: Missed Questions Round 1',
     description:
-      'MS Learn: Azure AI Face service (detection vs analysis vs recognition), OCR with Azure AI Vision Read API. Know the Pages->Lines->Words hierarchy.',
-    category: 'Computer Vision',
+      "Hit 'Missed Questions Only' on the start screen. Re-do every question you got wrong in Days 1-5. For any you miss AGAIN, look up that specific concept on MS Learn.",
+    category: 'Review',
   },
   {
     day: 7,
     date: 'May 11',
-    topic: 'Week 1 Review',
+    topic: 'Glossary & Gaps',
     description:
-      'Review Days 1-6 notes. Take a 20-question quiz in CertMasterMind filtered to AI Workloads and Computer Vision categories.',
+      "Read through the entire Glossary tab. Star or write down any terms you don't recognize. Look up those specific terms on MS Learn.",
     category: 'Review',
   },
   {
     day: 8,
     date: 'May 12',
-    topic: 'NLP Fundamentals (Part 1)',
+    topic: 'Targeted Drill: Weakest Category',
     description:
-      'MS Learn: Text Analytics - sentiment analysis, key phrase extraction, entity recognition, language detection. Know what each one returns.',
-    category: 'Natural Language Processing',
+      'Check your category stats on the start screen. Drill your lowest-scoring category. Read explanations even for correct answers.',
+    category: 'Review',
   },
   {
     day: 9,
     date: 'May 13',
-    topic: 'NLP Fundamentals (Part 2)',
+    topic: 'Targeted Drill: 2nd Weakest Category',
     description:
-      'MS Learn: Conversational Language Understanding (CLU) - intents, entities, utterances, the None intent. Know the author->train->publish->predict flow.',
-    category: 'Natural Language Processing',
+      "Drill your second-lowest category. If you're above 80% in all categories, do a full 'All Categories' run instead.",
+    category: 'Review',
   },
   {
     day: 10,
     date: 'May 14',
-    topic: 'Conversational AI & Bots',
+    topic: 'Full Mixed Quiz #1',
     description:
-      'MS Learn: Question Answering, Azure Bot Service, channels. Know how to build a FAQ bot: provision Language resource -> create KB -> deploy bot -> connect channels.',
-    category: 'Natural Language Processing',
+      'Select All Categories and do a full run. Simulate exam conditions: no breaks, no looking things up. Record your overall percentage.',
+    category: 'Practice Test',
   },
   {
     day: 11,
     date: 'May 15',
-    topic: 'Speech & Translation',
+    topic: 'Review: Missed Questions Round 2',
     description:
-      'MS Learn: Azure AI Speech (speech-to-text, text-to-speech), Translator service. Know acoustic vs language models and when to use each service.',
-    category: 'Natural Language Processing',
+      "Hit 'Missed Questions Only' again. These are your persistent weak spots. For each one, write a one-sentence summary of WHY the right answer is right.",
+    category: 'Review',
   },
   {
     day: 12,
     date: 'May 16',
-    topic: 'Machine Learning Concepts',
+    topic: 'Responsible AI Deep Dive',
     description:
-      'MS Learn: Regression, classification, clustering. Memorize: regression=numeric, classification=category, clustering=unsupervised grouping. Know one evaluation metric for each.',
-    category: 'Machine Learning Fundamentals',
+      "Memorize FAIR-PT mnemonic. Do the AI Workloads category again. You should be scoring 85%+ here - it's the easiest domain to lock down.",
+    category: 'AI Workloads & Responsible AI',
   },
   {
     day: 13,
     date: 'May 17',
-    topic: 'Azure ML & Deep Learning',
+    topic: 'Generative AI Deep Dive',
     description:
-      'MS Learn: Azure Machine Learning workspace, AutoML, features vs labels, training/validation split, deep learning & neural networks.',
-    category: 'Machine Learning Fundamentals',
+      'Re-drill Generative AI. Focus on: Microsoft Foundry, Foundry model catalog, temperature vs top_p, zero-shot vs few-shot, RAG, content filters.',
+    category: 'Generative AI',
   },
   {
     day: 14,
     date: 'May 18',
-    topic: 'Week 2 Review',
+    topic: 'Full Mixed Quiz #2',
     description:
-      'Review Days 8-13. Take a 30-question quiz in CertMasterMind filtered to NLP and ML categories. Note weak areas.',
-    category: 'Review',
+      'All categories, exam conditions. Target: 75%+. Compare to Quiz #1 - are the same categories still weak?',
+    category: 'Practice Test',
   },
   {
     day: 15,
     date: 'May 19',
-    topic: 'Generative AI Fundamentals',
+    topic: 'Microsoft Practice Assessment #1',
     description:
-      'MS Learn: LLMs, tokenization, embeddings, transformer architecture, attention mechanism. Know GPT=text, DALL-E=images.',
-    category: 'Generative AI',
+      'Take the FREE official Microsoft practice assessment at learn.microsoft.com. This is the closest to the real exam. Record domain scores.',
+    category: 'Practice Test',
   },
   {
     day: 16,
     date: 'May 20',
-    topic: 'Copilot & RAG',
+    topic: 'Gap Fill from MS Assessment',
     description:
-      'MS Learn: Microsoft Copilot, retrieval augmented generation (RAG), Azure AI Search integration. Know the full GenAI stack.',
-    category: 'Generative AI',
+      'Review every question you got wrong on the Microsoft assessment. Look up those specific topics. Re-read glossary entries for those concepts.',
+    category: 'Review',
   },
   {
     day: 17,
     date: 'May 21',
-    topic: 'Practice Test #1',
+    topic: 'Full Mixed Quiz #3',
     description:
-      'Take full Microsoft practice assessment. Target: 65%+. Write down EVERY question you got wrong and why.',
+      "All categories in the app. Target: 80%+. You should be seeing improvement from Quiz #1 and #2.",
     category: 'Practice Test',
   },
   {
     day: 18,
     date: 'May 22',
-    topic: 'Weak Spots',
+    topic: 'Service Matching Drill',
     description:
-      'Re-study the domains where you scored lowest. Go back to those specific MS Learn modules.',
+      'Go through the Glossary and for every Azure service, quiz yourself: what does it do? When would I use it? What was it formerly called?',
     category: 'Review',
   },
   {
     day: 19,
     date: 'May 23',
-    topic: 'Practice Test #2',
+    topic: 'Microsoft Practice Assessment #2',
     description:
-      'Retake practice assessment. Target: 75%+. Compare with Test #1 - are the same topics still weak?',
+      'Retake the official Microsoft assessment. Target: 80%+. Compare domain scores to Assessment #1.',
     category: 'Practice Test',
   },
   {
     day: 20,
     date: 'May 24',
-    topic: 'Cheat Sheet',
+    topic: 'Cheat Sheet Day',
     description:
-      'Build a 1-page cheat sheet: every Azure AI service name, what it does, when to use it. Write by hand if possible.',
+      'Review the Glossary tab - this IS your cheat sheet. Write down (by hand) the 10 terms you keep forgetting.',
     category: 'Review',
   },
   {
     day: 21,
     date: 'May 25',
-    topic: 'Practice Test #3',
+    topic: 'Final Full Run',
     description:
-      'Final practice assessment. Target: 80%+. If below 75%, focus Day 22 entirely on weak areas.',
+      'All categories, exam conditions. Target: 85%+. If below 75%, spend tomorrow on your weakest domain only.',
     category: 'Practice Test',
   },
   {
@@ -172,7 +172,7 @@ const studyPlan = [
     date: 'May 26',
     topic: 'Final Review',
     description:
-      'Review cheat sheet only. Skim responsible AI principles one more time. STOP studying by evening.',
+      'Review your handwritten cheat sheet only. Skim FAIR-PT one more time. Do 10 Missed Questions max. STOP studying by evening.',
     category: 'Review',
   },
 ]
